@@ -8,7 +8,8 @@ __pycache__/
 
 # Dataset
 results
-results/*.png
+results/*.jpg
+results/aligned
 results/aligned/*.png
 
 # Distribution / packaging
