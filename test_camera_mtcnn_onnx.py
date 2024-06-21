@@ -14,17 +14,15 @@ import cv2
 import numpy as np
 # import dlib
 from common.utils import BBox,drawLandmark,drawLandmark_multiple
-from models.basenet import MobileNet_GDConv_56
-from MTCNN import detect_faces
+from backbones.basenet import MobileNet_GDConv_56
+from detectors.MTCNN import detect_faces
 
 
-parser = argparse.ArgumentParser(description='PyTorch face landmark')
-parser.add_argument('-img', '--image', default='face76', type=str)
-parser.add_argument('-j', '--workers', default=8, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
-parser.add_argument('--gpu_id', default='0,1', type=str,
-                    help='id(s) for CUDA_VISIBLE_DEVICES')
-parser.add_argument('-c', '--checkpoint', default='checkpoint/mobilenet_56_model_best_gdconv.pth.tar', type=str, metavar='PATH',
+parser = argparse.ArgumentParser(description='Facial Landmark Detection')
+parser.add_argument('-i', '--image', type=str, default='face76')
+parser.add_argument('-w', '--workers', type=int, default=8, help='number of data loading workers (default: 4)', metavar='N')
+parser.add_argument('-g', '--gpu_id', type=str, default='0', help='id(s) for CUDA_VISIBLE_DEVICES')
+parser.add_argument('-c', '--checkpoint', type=str, default='checkpoints/mobilenet_56_model_best_gdconv.pth.tar', metavar='PATH',
                     help='path to save checkpoint (default: checkpoint)')
 
 args = parser.parse_args()
@@ -49,19 +47,22 @@ def load_model():
 
 
 if __name__ == '__main__':
+
+    model_ckpt = "onnx/landmark_detection_56_se_external.onnx"
+
     import onnx
-    onnx_model = onnx.load("onnx/landmark_detection_56_se_external.onnx")
+    onnx_model = onnx.load(model_ckpt)
     onnx.checker.check_model(onnx_model)
 
     import onnxruntime
-    ort_session = onnxruntime.InferenceSession("onnx/landmark_detection_56_se_external.onnx")
+    ort_session = onnxruntime.InferenceSession(model_ckpt)
 
     def to_numpy(tensor):
         return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
     out_size = 56
-    #model = load_model()
-    #model = model.eval()
+    # model = load_model()
+    # model = model.eval()
     cap = cv2.VideoCapture(0)
     success, frame = cap.read()
     while success:
@@ -76,6 +77,7 @@ if __name__ == '__main__':
         if len(faces) == 0:
             print('NO face is detected!')
             continue
+
         for k, face in enumerate(faces): 
             x1 = face[0]
             y1 = face[1]
@@ -110,7 +112,7 @@ if __name__ == '__main__':
 
             if cropped_face.shape[0]<=0 or cropped_face.shape[1]<=0:
                 continue
-            # test_face = cv2.resize(cropped_face,(out_size, out_size))
+            # test_face = cv2.resize(cropped_face, (out_size, out_size))
             cropped_face = cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB)
             cropped_face = Image.fromarray(cropped_face)
             test_face = resize(cropped_face)

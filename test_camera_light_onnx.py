@@ -15,7 +15,7 @@ import onnxruntime as ort
 from caffe2.python.onnx import backend
 
 # import libraries for landmark
-from common.utils import BBox,drawLandmark,drawLandmark_multiple
+from common.utils import BBox, drawLandmark, drawLandmark_multiple
 import vision.utils.box_utils_numpy as box_utils
 
 
@@ -28,9 +28,11 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
 # import the landmark detection models
 import onnx
 import onnxruntime
-onnx_model_landmark = onnx.load("onnx/landmark_detection_56_se_external.onnx")
+
+onnx_model_ckpt = "checkpoints/onnx/landmark_detection_56_se_external.onnx"
+onnx_model_landmark = onnx.load(onnx_model_ckpt)
 onnx.checker.check_model(onnx_model_landmark)
-ort_session_landmark = onnxruntime.InferenceSession("onnx/landmark_detection_56_se_external.onnx")
+ort_session_landmark = onnxruntime.InferenceSession(onnx_model_ckpt)
 
 def to_numpy(tensor):
     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
@@ -67,8 +69,8 @@ def predict(width, height, confidences, boxes, prob_threshold, iou_threshold=0.3
     return picked_box_probs[:, :4].astype(np.int32), np.array(picked_labels), picked_box_probs[:, 4]
 
 
-label_path = "models/voc-model-labels.txt"
-onnx_path = "models/onnx/version-RFB-320.onnx"
+label_path = "backbones/voc-model-labels.txt"
+onnx_path = "checkpoints/onnx/version-RFB-320.onnx"
 class_names = [name.strip() for name in open(label_path).readlines()]
 
 predictor = onnx.load(onnx_path)
@@ -89,6 +91,7 @@ while True:
     if orig_image is None:
         print("no img")
         break
+
     image = cv2.cvtColor(orig_image, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, (320, 240))
     # image = cv2.resize(image, (640, 480))
@@ -132,10 +135,12 @@ while True:
         edx = max(0, x2 - width)
         edy = max(0, y2 - height)
         x2 = min(width, x2)
-        y2 = min(height, y2)   
+        y2 = min(height, y2)
+
         new_bbox = list(map(int, [x1, x2, y1, y2]))
         new_bbox = BBox(new_bbox)
-        cropped=img[new_bbox.top:new_bbox.bottom,new_bbox.left:new_bbox.right]
+        cropped = img[new_bbox.top:new_bbox.bottom, 
+                      new_bbox.left:new_bbox.right]
         if (dx > 0 or dy > 0 or edx > 0 or edy > 0):
             cropped = cv2.copyMakeBorder(cropped, int(dy), int(edy), int(dx), int(edx), cv2.BORDER_CONSTANT, 0)            
         cropped_face = cv2.resize(cropped, (out_size, out_size))

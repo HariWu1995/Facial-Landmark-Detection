@@ -19,13 +19,14 @@ import onnxruntime
 
 # import libraries for landmark
 import vision.utils.box_utils_numpy as box_utils
-from common.utils import BBox,drawLandmark,drawLandmark_multiple
+from common.utils import BBox, drawLandmark, drawLandmark_multiple
 
 # import openvino 
 from openvino.inference_engine import IENetwork, IEPlugin, IECore
 ie = IECore()
-model_bin = os.path.splitext("openvino/mobilefacenet.xml")[0] + ".bin"
-net = ie.read_network(model="openvino/mobilefacenet.xml", weights=model_bin)
+model_cfg = "checkpoints/openvino/mobilefacenet.xml"
+model_bin = "checkpoints/openvino/mobilefacenet.bin"
+net = ie.read_network(model=model_cfg, weights=model_bin)
 input_blob = next(iter(net.inputs))
 # plugin = IEPlugin(device="CPU")
 # exec_net = plugin.load(network=net)
@@ -70,8 +71,8 @@ def predict(width, height, confidences, boxes, prob_threshold, iou_threshold=0.3
     return picked_box_probs[:, :4].astype(np.int32), np.array(picked_labels), picked_box_probs[:, 4]
 
 
-label_path = "models/voc-model-labels.txt"
-onnx_path = "models/onnx/version-RFB-320.onnx"
+label_path = "backbones/voc-model-labels.txt"
+onnx_path = "checkpoints/onnx/version-RFB-320.onnx"
 class_names = [name.strip() for name in open(label_path).readlines()]
 
 predictor = onnx.load(onnx_path)
@@ -110,7 +111,7 @@ while True:
         box = boxes[i, :]
         label = f"{class_names[labels[i]]}: {probs[i]:.2f}"
 
-        #cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
+        # cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
         # perform landmark detection
         out_size = 112
         img = orig_image.copy()

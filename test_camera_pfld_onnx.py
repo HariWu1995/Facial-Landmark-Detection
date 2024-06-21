@@ -25,9 +25,13 @@ to_tensor = transforms.ToTensor()
 # import the landmark detection models
 import onnx
 import onnxruntime
-onnx_model_landmark = onnx.load("onnx/pfld.onnx")
+
+onnx_model_ckpt = "checkpoints/onnx/pfld.onnx"
+onnx_model_landmark = onnx.load(onnx_model_ckpt)
 onnx.checker.check_model(onnx_model_landmark)
-ort_session_landmark = onnxruntime.InferenceSession("onnx/pfld.onnx")
+ort_session_landmark = onnxruntime.InferenceSession(onnx_model_ckpt)
+
+
 def to_numpy(tensor):
     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
@@ -47,12 +51,13 @@ def predict(width, height, confidences, boxes, prob_threshold, iou_threshold=0.3
         box_probs = np.concatenate([subset_boxes, probs.reshape(-1, 1)], axis=1)
         box_probs = box_utils.hard_nms(box_probs,
                                        iou_threshold=iou_threshold,
-                                       top_k=top_k,
-                                       )
+                                       top_k=top_k)
         picked_box_probs.append(box_probs)
         picked_labels.extend([class_index] * box_probs.shape[0])
+
     if not picked_box_probs:
         return np.array([]), np.array([]), np.array([])
+
     picked_box_probs = np.concatenate(picked_box_probs)
     picked_box_probs[:, 0] *= width
     picked_box_probs[:, 1] *= height
@@ -61,9 +66,8 @@ def predict(width, height, confidences, boxes, prob_threshold, iou_threshold=0.3
     return picked_box_probs[:, :4].astype(np.int32), np.array(picked_labels), picked_box_probs[:, 4]
 
 
-label_path = "models/voc-model-labels.txt"
-
-onnx_path = "models/onnx/version-RFB-320.onnx"
+label_path = "backbones/voc-model-labels.txt"
+onnx_path = "checkpoints/onnx/version-RFB-320.onnx"
 class_names = [name.strip() for name in open(label_path).readlines()]
 
 predictor = onnx.load(onnx_path)
@@ -84,6 +88,7 @@ while True:
     if orig_image is None:
         print("no img")
         break
+
     image = cv2.cvtColor(orig_image, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, (320, 240))
     # image = cv2.resize(image, (640, 480))
@@ -101,7 +106,7 @@ while True:
         box = boxes[i, :]
         label = f"{class_names[labels[i]]}: {probs[i]:.2f}"
 
-        #cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
+        # cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
         # perform landmark detection
         out_size = 56
         img=orig_image.copy()
@@ -130,7 +135,8 @@ while True:
         y2 = min(height, y2)   
         new_bbox = list(map(int, [x1, x2, y1, y2]))
         new_bbox = BBox(new_bbox)
-        cropped=img[new_bbox.top:new_bbox.bottom,new_bbox.left:new_bbox.right]
+        cropped = img[new_bbox.top:new_bbox.bottom, 
+                      new_bbox.left:new_bbox.right]
         if (dx > 0 or dy > 0 or edx > 0 or edy > 0):
             cropped = cv2.copyMakeBorder(cropped, int(dy), int(edy), int(dx), int(edx), cv2.BORDER_CONSTANT, 0)            
         cropped_face = cv2.resize(cropped, (out_size, out_size))
@@ -141,7 +147,7 @@ while True:
         cropped_face = Image.fromarray(cropped_face)
         test_face = resize(cropped_face)
         test_face = to_tensor(test_face)
-        #test_face = normalize(test_face)
+        # test_face = normalize(test_face)
         test_face.unsqueeze_(0)
 
         start = time.time()             
@@ -159,6 +165,9 @@ while True:
     cv2.imshow('annotated', orig_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
 cap.release()
 cv2.destroyAllWindows()
 print("sum:{}".format(sum))
+
+

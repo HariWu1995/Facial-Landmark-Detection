@@ -1,4 +1,4 @@
-# Pytorch Face Landmark Detection
+# Facial Landmark Detection
 Implementation of face landmark detection with PyTorch. The models were trained using coordinate-based or heatmap-based regression methods. Different face detetors were supported. A [video demo](https://lnkd.in/eH27JcP) and [image detection](https://github.com/cunjian/pytorch_face_landmark/tree/master/results) results were displayed here. 
 
 * Support 68-point and 39-point landmark inference.
@@ -9,17 +9,18 @@ Implementation of face landmark detection with PyTorch. The models were trained 
 
 ## Inference
 Test on a sample folder and save the landmark detection and cropped face results. Support different backbones and face detectors.
-> python3 test_batch_detections.py --backbone MobileFaceNet --detector Retinaface
-* backbone: MobileNet/PFLD/MobileFaceNet; detector: MTCNN/FaceBoxes/Retinaface
+> python test_batch_detections.py --backbone MobileFaceNet --detector Retinaface
+* backbone: MobileNet / PFLD / MobileFaceNet; 
+* detector: MTCNN / [FaceBoxes](https://drive.google.com/file/d/1tRVwOlu0QtjvADQ2H7vqrRwsWEmaqioI) / Retinaface
 
 Optimize with ONNX and test on a camera with MTCNN as a face detector. 
-> python3 test_camera_mtcnn_onnx.py
+> python test_camera_mtcnn_onnx.py
 
 Optimize with ONNX and test on a camera with a lightweight face detector. It can achieve **real-time speed on CPU**.
-> python3 test_camera_light_onnx.py
+> python test_camera_light_onnx.py
 
 Optimize with OpenVINO and test on a camera with a lightweight face detector. About 10 times faster than ONNX.
-> python3 test_camera_mobilefacenet_openvino.py
+> python test_camera_mobilefacenet_openvino.py
 
 ## Benchmark Results on 300W
 

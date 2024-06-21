@@ -17,13 +17,13 @@ import cv2
 from PIL import Image
 import matplotlib.pyplot as plt
 
-from models.basenet import MobileNet_GDConv
-from models.pfld_compressed import PFLDInference
-from models.mobilefacenet import MobileFaceNet
-from FaceBoxes import FaceBoxes
-from Retinaface import Retinaface
-from MTCNN import detect_faces
-from common.utils import BBox,drawLandmark,drawLandmark_multiple
+from backbones.basenet import MobileNet_GDConv
+from backbones.mobilefacenet import MobileFaceNet
+from backbones.pfld_compressed import PFLDInference
+# from detectors.FaceBoxes import FaceBoxes
+from detectors.Retinaface import RetinaFaceNet as RetinaFace
+from detectors.MTCNN import detect_faces
+from common.utils import BBox, drawLandmark, drawLandmark_multiple
 from utils.align_trans import get_reference_facial_points, warp_and_crop_face
 
 
@@ -43,21 +43,21 @@ else:
     map_location = 'cpu'
 
 
-def load_model():
+def load_model(backbone: str = 'mobilenet'):
 
-    print(f'Use {args.backbone} as backbone')
-    if args.backbone == 'MobileNet':
+    print(f'Use {backbone} as backbone')
+    if backbone == 'mobilenet':
         # https://drive.google.com/file/d/1Le5UdpMkKOTRr1sTp4lwkw8263sbgdSe/view?usp=sharing
         model = MobileNet_GDConv(136)
         model = torch.nn.DataParallel(model)
         checkpoint_fn = 'mobilenet_224_model_best_gdconv_external'
 
-    elif args.backbone == 'PFLD':
+    elif backbone == 'pfld':
         # https://drive.google.com/file/d/1gjgtm6qaBQJ_EY7lQfQj3EuMJCVg9lVu/view?usp=sharing
         model = PFLDInference()
         checkpoint_fn = 'pfld_model_best'
     
-    elif args.backbone == 'MobileFaceNet':
+    elif backbone == 'mobilefacenet':
         # https://drive.google.com/file/d/1T8J73UTcB25BEJ_ObAJczCkyGKW5VaeY/view?usp=sharing
         model = MobileFaceNet([112, 112], 136)
         checkpoint_fn = 'mobilefacenet_model_best'
@@ -73,25 +73,33 @@ def load_model():
 
 if __name__ == '__main__':
 
+    if not os.path.isdir('results'):
+        os.makedirs('results')
+    if not os.path.isdir('results/aligned'):
+        os.makedirs('results/aligned')
+
     parser = argparse.ArgumentParser(description='Facial Landmark Detection')
 
-    parser.add_argument('--backbone', default='MobileFaceNet', type=str,
+    parser.add_argument('-b', '--backbone', default='MobileFaceNet', type=str,
                         help='choose which backbone network to use: MobileNet, PFLD, MobileFaceNet')
-    parser.add_argument('--detector', default='Retinaface', type=str,
+    parser.add_argument('-d', '--detector', default='Retinaface', type=str,
                         help='choose which face detector to use: MTCNN, FaceBoxes, Retinaface')
 
     args, _ = parser.parse_known_args()
 
-    if args.backbone=='MobileNet':
+    args.detector = args.detector.lower()
+    args.backbone = args.backbone.lower()
+
+    if args.backbone == 'mobileNet':
         out_size = 224
     else:
         out_size = 112 
 
-    model = load_model()
+    model = load_model(args.backbone)
     model = model.eval()
 
-    filenames = glob.glob("samples/12--Group/*.jpg")
-    for imgname in filenames:
+    filenames = glob("samples/12--Group/*.jpg")
+    for imgname in tqdm(filenames):
         print(imgname)
 
         img = cv2.imread(imgname)
@@ -99,16 +107,16 @@ if __name__ == '__main__':
         height, width, _ = img.shape
 
         # Face detection
-        if args.detector=='MTCNN':
+        if args.detector == 'mtcnn':
             image = Image.open(imgname)
             faces, landmarks = detect_faces(image)
 
-        elif args.detector=='FaceBoxes':
+        elif args.detector == 'faceboxes':
             face_boxes = FaceBoxes()
             faces = face_boxes(img)
 
-        elif args.detector=='Retinaface':
-            retinaface=Retinaface.Retinaface()    
+        elif args.detector == 'retinaface':
+            retinaface = RetinaFace()    
             faces = retinaface(img)
 
         else:
@@ -161,7 +169,7 @@ if __name__ == '__main__':
 
             test_face = cropped_face.copy()
             test_face = test_face / 255.
-            if args.backbone == 'MobileNet':
+            if args.backbone == 'mobilenet':
                 test_face = (test_face - mean) / std
             test_face = test_face.transpose((2, 0, 1))
             test_face = test_face.reshape((1,) + test_face.shape)
@@ -170,7 +178,7 @@ if __name__ == '__main__':
             input= torch.autograd.Variable(input)
  
             start = time.time()
-            if args.backbone=='MobileFaceNet':
+            if args.backbone=='mobilefacenet':
                 landmark = model(input)[0].cpu().data.numpy()
             else:
                 landmark = model(input).cpu().data.numpy()
@@ -208,8 +216,8 @@ if __name__ == '__main__':
             img_warped = Image.fromarray(warped_face)
             
             # save the aligned and cropped faces
-            img_warped.save(os.path.join('results_aligned', os.path.basename(imgname)[:-4]+'_'+str(k)+'.png'))
-            # img = drawLandmark_multiple(img, new_bbox, facial5points)  # plot and show 5 points
+            img_warped.save(os.path.join('results/aligned', os.path.basename(imgname)[:-4]+'_'+str(k)+'.png'))
+            img = drawLandmark_multiple(img, new_bbox, facial5points)  # plot and show 5 points
         
         # save the landmark detections 
         cv2.imwrite(os.path.join('results', os.path.basename(imgname)), img)
