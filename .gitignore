@@ -7,9 +7,7 @@ __pycache__/
 *.so
 
 # Dataset
-data/WFLW
-data/test_data
-data/train_data
+results
 
 # Distribution / packaging
 .Python
