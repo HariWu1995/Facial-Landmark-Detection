@@ -11,6 +11,7 @@ import torch.nn as nn
 import math
 import torch.nn.init as init
 
+
 def conv_bn(inp, oup, kernel, stride, padding=1):
     return nn.Sequential(
         nn.Conv2d(inp, oup, kernel, stride, padding, bias=False),
@@ -26,6 +27,7 @@ def conv_1x1_bn(inp, oup):
 
 
 class InvertedResidual(nn.Module):
+
     def __init__(self, inp, oup, stride, use_res_connect, expand_ratio=6):
         super(InvertedResidual, self).__init__()
         self.stride = stride
@@ -59,6 +61,7 @@ class InvertedResidual(nn.Module):
 
 
 class PFLDInference(nn.Module):
+
     def __init__(self):
         super(PFLDInference, self).__init__()
 
@@ -114,6 +117,7 @@ class PFLDInference(nn.Module):
         self.fc1_aux = nn.Linear(128, 32)
         self.fc2_aux = nn.Linear(32 + 176, 3)
         '''
+
     def forward(self, x):  # x: 3, 112, 112
         x = self.relu(self.bn1(self.conv1(x)))  # [64, 56, 56]
         #x = self.relu(self.bn2(self.conv2(x)))  # [64, 56, 56]
@@ -159,6 +163,7 @@ class PFLDInference(nn.Module):
         return pose, landmarks
         '''
         return landmarks
+
 
 if __name__ == '__main__':
     input = torch.randn(1, 3, 112, 112)

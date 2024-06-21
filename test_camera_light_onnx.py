@@ -6,29 +6,32 @@ Date: 3/26/2020 by Cunjian Chen (ccunjian@gmail.com)
 import time
 import cv2
 import numpy as np
-import onnx
-import vision.utils.box_utils_numpy as box_utils
-from caffe2.python.onnx import backend
+from PIL import Image
+import torchvision.transforms as transforms
 
 # onnx runtime
+import onnx
 import onnxruntime as ort
+from caffe2.python.onnx import backend
 
 # import libraries for landmark
 from common.utils import BBox,drawLandmark,drawLandmark_multiple
-from PIL import Image
-import torchvision.transforms as transforms
+import vision.utils.box_utils_numpy as box_utils
+
 
 # setup the parameters
 resize = transforms.Resize([56, 56])
 to_tensor = transforms.ToTensor()
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+                                  std=[0.229, 0.224, 0.225])
+
 # import the landmark detection models
 import onnx
 import onnxruntime
 onnx_model_landmark = onnx.load("onnx/landmark_detection_56_se_external.onnx")
 onnx.checker.check_model(onnx_model_landmark)
 ort_session_landmark = onnxruntime.InferenceSession("onnx/landmark_detection_56_se_external.onnx")
+
 def to_numpy(tensor):
     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
@@ -52,8 +55,10 @@ def predict(width, height, confidences, boxes, prob_threshold, iou_threshold=0.3
                                        )
         picked_box_probs.append(box_probs)
         picked_labels.extend([class_index] * box_probs.shape[0])
+
     if not picked_box_probs:
         return np.array([]), np.array([]), np.array([])
+
     picked_box_probs = np.concatenate(picked_box_probs)
     picked_box_probs[:, 0] *= width
     picked_box_probs[:, 1] *= height
@@ -63,7 +68,6 @@ def predict(width, height, confidences, boxes, prob_threshold, iou_threshold=0.3
 
 
 label_path = "models/voc-model-labels.txt"
-
 onnx_path = "models/onnx/version-RFB-320.onnx"
 class_names = [name.strip() for name in open(label_path).readlines()]
 
@@ -105,12 +109,12 @@ while True:
         #cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
         # perform landmark detection
         out_size = 56
-        img=orig_image.copy()
-        height,width,_=img.shape
-        x1=box[0]
-        y1=box[1]
-        x2=box[2]
-        y2=box[3]
+        img = orig_image.copy()
+        height, width, _ = img.shape
+        x1 = box[0]
+        y1 = box[1]
+        x2 = box[2]
+        y2 = box[3]
         w = x2 - x1 + 1
         h = y2 - y1 + 1
         size = int(max([w, h])*1.1)
@@ -160,6 +164,7 @@ while True:
     cv2.imshow('annotated', orig_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
 cap.release()
 cv2.destroyAllWindows()
-print("sum:{}".format(sum))
+print("sum: {}".format(sum))

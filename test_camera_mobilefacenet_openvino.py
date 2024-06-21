@@ -4,13 +4,13 @@ This code performs a real-time face and landmark detections
 2. Use mobilefacenet as a light-weight landmark detector (OpenVINO: 10 times faster than ONNX)
 Date: 09/27/2020 by Cunjian Chen (ccunjian@gmail.com)
 """
+import os
 import time
 import cv2
 import numpy as np
-import onnx
-import vision.utils.box_utils_numpy as box_utils
 from caffe2.python.onnx import backend
-import os
+from PIL import Image
+import torchvision.transforms as transforms
 
 # onnx runtime
 import onnxruntime as ort
@@ -18,9 +18,8 @@ import onnx
 import onnxruntime
 
 # import libraries for landmark
+import vision.utils.box_utils_numpy as box_utils
 from common.utils import BBox,drawLandmark,drawLandmark_multiple
-from PIL import Image
-import torchvision.transforms as transforms
 
 # import openvino 
 from openvino.inference_engine import IENetwork, IEPlugin, IECore
@@ -28,9 +27,9 @@ ie = IECore()
 model_bin = os.path.splitext("openvino/mobilefacenet.xml")[0] + ".bin"
 net = ie.read_network(model="openvino/mobilefacenet.xml", weights=model_bin)
 input_blob = next(iter(net.inputs))
-#plugin = IEPlugin(device="CPU")
-#exec_net = plugin.load(network=net)
-exec_net = ie.load_network(network=net,device_name="CPU")
+# plugin = IEPlugin(device="CPU")
+# exec_net = plugin.load(network=net)
+exec_net = ie.load_network(network=net, device_name="CPU")
 
 # setup the parameters
 resize = transforms.Resize([112, 112])
@@ -59,8 +58,10 @@ def predict(width, height, confidences, boxes, prob_threshold, iou_threshold=0.3
                                        )
         picked_box_probs.append(box_probs)
         picked_labels.extend([class_index] * box_probs.shape[0])
+
     if not picked_box_probs:
         return np.array([]), np.array([]), np.array([])
+
     picked_box_probs = np.concatenate(picked_box_probs)
     picked_box_probs[:, 0] *= width
     picked_box_probs[:, 1] *= height
@@ -70,7 +71,6 @@ def predict(width, height, confidences, boxes, prob_threshold, iou_threshold=0.3
 
 
 label_path = "models/voc-model-labels.txt"
-
 onnx_path = "models/onnx/version-RFB-320.onnx"
 class_names = [name.strip() for name in open(label_path).readlines()]
 
@@ -92,6 +92,7 @@ while True:
     if orig_image is None:
         print("no img")
         break
+
     image = cv2.cvtColor(orig_image, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, (320, 240))
     # image = cv2.resize(image, (640, 480))
@@ -112,12 +113,12 @@ while True:
         #cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (255, 255, 0), 4)
         # perform landmark detection
         out_size = 112
-        img=orig_image.copy()
-        height,width,_=img.shape
-        x1=box[0]
-        y1=box[1]
-        x2=box[2]
-        y2=box[3]
+        img = orig_image.copy()
+        height, width, _ = img.shape
+        x1 = box[0]
+        y1 = box[1]
+        x2 = box[2]
+        y2 = box[3]
         w = x2 - x1 + 1
         h = y2 - y1 + 1
         size = int(max([w, h]))
@@ -138,7 +139,8 @@ while True:
         y2 = min(height, y2)   
         new_bbox = list(map(int, [x1, x2, y1, y2]))
         new_bbox = BBox(new_bbox)
-        cropped=img[new_bbox.top:new_bbox.bottom,new_bbox.left:new_bbox.right]
+        cropped = img[new_bbox.top:new_bbox.bottom, 
+                      new_bbox.left:new_bbox.right]
         if (dx > 0 or dy > 0 or edx > 0 or edy > 0):
             cropped = cv2.copyMakeBorder(cropped, int(dy), int(edy), int(dx), int(edx), cv2.BORDER_CONSTANT, 0)            
         cropped_face = cv2.resize(cropped, (out_size, out_size))
@@ -148,13 +150,14 @@ while True:
         test_face = cropped_face.copy()   
         test_face = test_face/255.0
         test_face = test_face.transpose((2, 0, 1))
-        test_face = test_face.reshape((1,) + test_face.shape)  
+        test_face = test_face.reshape((1,) + test_face.shape)
+
         # OpenVINO Inference
         start = time.time()             
         outputs = exec_net.infer(inputs={input_blob: test_face})
         key = list(outputs.keys())[0]
         output = outputs[key]
-        landmark=output[0].reshape(-1,2)
+        landmark = output[0].reshape(-1,2)
         end = time.time()
         print('Time: {:.6f}s.'.format(end - start))
         landmark = landmark.reshape(-1,2)
@@ -166,6 +169,7 @@ while True:
     cv2.imshow('annotated', orig_image)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
 cap.release()
 cv2.destroyAllWindows()
-print("sum:{}".format(sum))
+print("sum: {}".format(sum))
