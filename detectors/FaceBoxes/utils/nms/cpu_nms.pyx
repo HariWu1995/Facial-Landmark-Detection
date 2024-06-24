@@ -22,11 +22,11 @@ def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
     cdef np.ndarray[np.float32_t, ndim=1] scores = dets[:, 4]
 
     cdef np.ndarray[np.float32_t, ndim=1] areas = (x2 - x1 + 1) * (y2 - y1 + 1)
-    cdef np.ndarray[np.int_t, ndim=1] order = scores.argsort()[::-1]
+    cdef np.ndarray[np.int64_t, ndim=1] order = scores.argsort()[::-1]
 
     cdef int ndets = dets.shape[0]
-    cdef np.ndarray[np.int_t, ndim=1] suppressed = \
-            np.zeros((ndets), dtype=np.int)
+    cdef np.ndarray[np.int64_t, ndim=1] suppressed = \
+            np.zeros((ndets), dtype=np.int64)
 
     # nominal indices
     cdef int _i, _j
@@ -67,6 +67,7 @@ def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
 
     return keep
 
+
 def cpu_soft_nms(np.ndarray[float, ndim=2] boxes, float sigma=0.5, float Nt=0.3, float threshold=0.001, unsigned int method=0):
     cdef unsigned int N = boxes.shape[0]
     cdef float iw, ih, box_area
@@ -87,21 +88,22 @@ def cpu_soft_nms(np.ndarray[float, ndim=2] boxes, float sigma=0.5, float Nt=0.3,
         ts = boxes[i,4]
 
         pos = i + 1
-	# get max box
+
+	    # get max box
         while pos < N:
             if maxscore < boxes[pos, 4]:
                 maxscore = boxes[pos, 4]
                 maxpos = pos
             pos = pos + 1
 
-	# add max box as a detection 
+	    # add max box as a detection 
         boxes[i,0] = boxes[maxpos,0]
         boxes[i,1] = boxes[maxpos,1]
         boxes[i,2] = boxes[maxpos,2]
         boxes[i,3] = boxes[maxpos,3]
         boxes[i,4] = boxes[maxpos,4]
 
-	# swap ith box with position of max box
+	    # swap ith box with position of max box
         boxes[maxpos,0] = tx1
         boxes[maxpos,1] = ty1
         boxes[maxpos,2] = tx2
@@ -115,7 +117,8 @@ def cpu_soft_nms(np.ndarray[float, ndim=2] boxes, float sigma=0.5, float Nt=0.3,
         ts = boxes[i,4]
 
         pos = i + 1
-	# NMS iterations, note that N changes if detection boxes fall below threshold
+
+	    # NMS iterations, note that N changes if detection boxes fall below threshold
         while pos < N:
             x1 = boxes[pos, 0]
             y1 = boxes[pos, 1]

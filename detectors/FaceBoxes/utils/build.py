@@ -34,6 +34,7 @@ except AttributeError:
 
 # run the customize_compiler
 class custom_build_ext(build_ext):
+
     def build_extensions(self):
         # customize_compiler_for_nvcc(self.compiler)
         build_ext.build_extensions(self)
@@ -44,7 +45,7 @@ ext_modules = [
         "nms.cpu_nms",
         ["nms/cpu_nms.pyx"],
         # extra_compile_args={'gcc': ["-Wno-cpp", "-Wno-unused-function"]},
-        extra_compile_args=["-Wno-cpp", "-Wno-unused-function"],
+        # extra_compile_args=["-Wno-cpp", "-Wno-unused-function"],
         include_dirs=[numpy_include]
     )
 ]

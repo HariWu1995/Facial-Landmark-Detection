@@ -1,7 +1,7 @@
 # Face alignment and crop demo
 # Uses MTCNN, FaceBoxes or Retinaface as a face detector;
 # Support different backbones, include PFLD, MobileFaceNet, MobileNet;
-# Retinaface+MobileFaceNet gives the best peformance
+# Retinaface + MobileFaceNet gives the best peformance
 # Cunjian Chen (ccunjian@gmail.com), Feb. 2021
 
 from __future__ import division
@@ -20,8 +20,8 @@ import matplotlib.pyplot as plt
 from backbones.basenet import MobileNet_GDConv
 from backbones.mobilefacenet import MobileFaceNet
 from backbones.pfld_compressed import PFLDInference
-# from detectors.FaceBoxes import FaceBoxes
 from detectors.Retinaface import RetinaFaceNet as RetinaFace
+from detectors.FaceBoxes import FaceBoxes
 from detectors.MTCNN import detect_faces
 from common.utils import BBox, drawLandmark, drawLandmark_multiple
 from utils.align_trans import get_reference_facial_points, warp_and_crop_face
@@ -80,9 +80,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Facial Landmark Detection')
 
-    parser.add_argument('-b', '--backbone', default='MobileFaceNet', type=str,
+    parser.add_argument('-b', '--backbone', default='PFLD', type=str,
                         help='choose which backbone network to use: MobileNet, PFLD, MobileFaceNet')
-    parser.add_argument('-d', '--detector', default='Retinaface', type=str,
+    parser.add_argument('-d', '--detector', default='FaceBoxes', type=str,
                         help='choose which face detector to use: MTCNN, FaceBoxes, Retinaface')
 
     args, _ = parser.parse_known_args()
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     args.detector = args.detector.lower()
     args.backbone = args.backbone.lower()
 
-    if args.backbone == 'mobileNet':
+    if args.backbone == 'mobilenet':
         out_size = 224
     else:
         out_size = 112 
@@ -175,10 +175,10 @@ if __name__ == '__main__':
             test_face = test_face.reshape((1,) + test_face.shape)
  
             input = torch.from_numpy(test_face).float()
-            input= torch.autograd.Variable(input)
+            input = torch.autograd.Variable(input)
  
             start = time.time()
-            if args.backbone=='mobilefacenet':
+            if args.backbone == 'mobilefacenet':
                 landmark = model(input)[0].cpu().data.numpy()
             else:
                 landmark = model(input).cpu().data.numpy()

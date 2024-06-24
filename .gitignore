@@ -7,9 +7,9 @@ __pycache__/
 *.so
 
 # Dataset
-results
+results/
 results/*.jpg
-results/aligned
+results/aligned/
 results/aligned/*.png
 
 # Distribution / packaging
