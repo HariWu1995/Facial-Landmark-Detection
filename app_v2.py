@@ -191,7 +191,7 @@ def focus_5_points(landmark: np.ndarray, image: np.ndarray = None):
 
 def run_landmark(image_path: str, 
                  landmarker: str = 'MobileFaceNet', 
-                 focus_mode: str = 'false'):
+                  alignment: str = 'none'):
 
     print(f'\nRunning face-landmark for {image_path} ...')
 
@@ -228,17 +228,27 @@ def run_landmark(image_path: str,
 
     landmark = landmark.reshape(-1,2)
     landmark = bbox.reprojectLandmark(landmark)
-    if str(focus_mode).lower() in ['true', 't', 'y', '1']:
-        landmark = focus_5_points(landmark)
 
     img = drawLandmark_multiple(img, bbox, landmark)
     
     # save the landmark detections
     output_fn = os.path.splitext(
-                os.path.basename(image_path))[0] + '_marked.png'
-    output_path = os.path.join('results', output_fn)
+                os.path.basename(image_path))[0]
+    output_path = os.path.join('results', f'{output_fn}_marked.png')
     cv2.imwrite(output_path, img)
-    return output_path
+    
+    if str(alignment).lower() == 'none':
+        return [output_path]
+
+    focus_pts = focus_5_points(landmark)
+    img_warped = warp_and_crop_face(  src_img = img, 
+                                    facial_pts = focus_pts, 
+                                reference_pts = FACE_REFERENCE, 
+                                    crop_size = (CROP_SIZE, CROP_SIZE))
+    img_warped = drawLandmark_multiple(img_warped, bbox, FACE_REFERENCE)
+    warped_path = os.path.join('results', f'{output_fn}_warped.png')
+    cv2.imwrite(warped_path, img_warped)
+    return [output_path, warped_path]
 
 
 # Define styles
@@ -291,19 +301,20 @@ def load_ui():
                     
                     with gr.Accordion(open=False, label="Advanced Options"):
                         landmarker = gr.Dropdown(label="Face Landmarker", choices=face_landmarkers, value="MobileFaceNet", interactive=True)
-                        focus_mode = gr.Dropdown(label="Focus Mode", choices=['true', 'false'], value='false', interactive=True)
+                        alignment = gr.Dropdown(label="Alignment", choices=['none','cv2_affine',
+                                                                            'affine','similarity'], value='none', interactive=True)
                         reloader = gr.Button(value="Re-Load model", variant="primary")
 
                 with gr.Column(scale=1):
-                    img_lm_out = gr.Image(label="Face Landmarks", type="pil")
+                    img_lm_out = gr.Gallery(label="Face Landmarks", allow_preview=True, preview=True)
                     facemarker = gr.Button(value="Highlight Face Landmarks", variant="primary")
                     facemarker_tips = gr.Markdown(label="Landmarking Tips", value=tips, visible=True)
 
         # Callback
         reloader.click(fn=load_model, inputs=landmarker)
         detection.click(fn=run_detection, inputs=[img_det_in, detector], outputs=img_det_out)
-        facemarker.click(fn=run_landmark, inputs=[img_lm_in, landmarker, focus_mode], outputs=img_lm_out)
-
+        facemarker.click(fn=run_landmark, inputs=[img_lm_in, 
+                                                  landmarker, alignment], outputs=img_lm_out)
     return gui
 
 

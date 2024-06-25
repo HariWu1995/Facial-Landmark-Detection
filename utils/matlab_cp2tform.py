@@ -1,12 +1,17 @@
+import warnings
+warnings.filterwarnings("ignore", message="Passing", category=FutureWarning)
+
 import numpy as np
 from numpy.linalg import inv, norm, lstsq
 from numpy.linalg import matrix_rank as rank
 
 
 class MatlabCp2tormException(Exception):
+
     def __str__(self):
         return "In File {}:{}".format(
                 __file__, super.__str__(self))
+
 
 def tformfwd(trans, uv):
     """
@@ -109,8 +114,8 @@ def findSimilarity(uv, xy, options=None):
 
     options = {'K': 2}
 
-#    uv = np.array(uv)
-#    xy = np.array(xy)
+    # uv = np.array(uv)
+    # xy = np.array(xy)
 
     # Solve for trans1
     trans1, trans1_inv = findNonreflectiveSimilarity(uv, xy, options)
